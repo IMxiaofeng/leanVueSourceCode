@@ -1,12 +1,31 @@
 
+import { newArrayProto } from './array'
+
 class Observer {
   constructor( data ) {
     // Obect.defineProperty只能劫持已经存在的属性，后增的，删除的，无法检测到（会有一些单独的api， $set, $delete）
-    this.walk(data)
+    // data.__ob__ = this // 也相当于给数据加了个标识，如果带有__ob__属性，则说明数据已经做过监听劫持
+    // 这里要考虑data是个对象的话，劫持就会进入死循环，所以要讲其变成不可枚举
+    Object.defineProperty(data, '__ob__', {
+      value: this,
+      enumerable: false
+    })
+
+    if( Array.isArray(data) ) {
+      // 这里考虑用户的操作习惯，对数组的一些方法进行重写
+
+      data.__proto__ = newArrayProto
+      this.observerArray(data)
+    } else {
+      this.walk(data)
+    }
   }
   walk(data) { // 循环对象，对属性依次劫持
     // "重新定义"属性  性能差
     Object.keys(data).forEach(key=>defineReactive(data, key, data[key]))
+  }
+  observerArray(data) { // 观测数组
+    data.forEach(item=>observe(item))
   }
 }
 
@@ -29,6 +48,10 @@ export function observe(data) {
 
   if( typeof data !== 'object' || data == null ){
     return // 只对 对象类型的数据进行劫持
+  }
+
+  if( data.__ob__ instanceof Observer ) {
+    return data.__ob__; // 说明对象被代理过了
   }
 
   // 如果一个对象被劫持过了，那就不需要再被劫持了
