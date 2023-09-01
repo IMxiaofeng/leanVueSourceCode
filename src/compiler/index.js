@@ -12,16 +12,51 @@ const defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g;  // 匹配双大括号及其之
 // 对模板进行编译处理
 function parseHTML(html) { // html最开始肯定是一个<
 
-  function start(tag, attrs) {
+  const ELEMENT_TYPE = 1;
+  const TEXT_TYPE = 3
+  const stack = []; // 用于存放元素的
+  let currentParent; // 指向的是栈中的最后一个
+  let root;
 
+  function createASTElement(tag, attrs) {
+    return {
+      tag,
+      type: ELEMENT_TYPE,
+      children: [],
+      attrs,
+      parent: null
+    }
   }
 
-  function charts(text) {
+  // 最终需要转换成一个抽象语法树
+  function start(tag, attrs) {
+    let node = createASTElement(tag, attrs); // 创造一个ast节点
+    if(!root) {  // 看一下是否是空树
+      root = node   // 如果为空则当前是树的根节点
+    }
 
+    if(currentParent) {
+      node.parent = currentParent;
+      currentParent.children.push(node);
+    }
+
+
+    stack.push(node);
+    currentParent = node; // currentParent为栈中的最后一个
+  }
+
+  function charts(text) { // 文本直接放到当前指向的节点
+    text = text.replace(/\s/g, '')
+    currentParent.children.push({
+      type: TEXT_TYPE,
+      text,
+      parent: currentParent
+    })
   }
 
   function end(tag) {
-
+    let node =  stack.pop(); // 弹出最后一个 可以在这里校验标签是否合法
+    currentParent = stack[stack.length-1]
   }
 
   function advance(n) {
@@ -61,6 +96,7 @@ function parseHTML(html) { // html最开始肯定是一个<
       const statrTagMatch = parseStartTag(); // 开始标签的匹配结果
 
       if( statrTagMatch ) { // 解析到的开始标签
+        start(statrTagMatch.tagName, statrTagMatch.attrs)
         continue;
       }
 
@@ -68,6 +104,7 @@ function parseHTML(html) { // html最开始肯定是一个<
 
       if ( endTagMatch ) {
         advance(endTagMatch[0].length);
+        end(endTagMatch[1])
         continue;
       }
 
@@ -77,6 +114,7 @@ function parseHTML(html) { // html最开始肯定是一个<
       let text = html.substring(0, textEnd); // 文本内容
 
       if( text ) {
+        charts(text)
         advance(text.length) // 解析到的文本
       }
 
