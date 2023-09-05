@@ -41,11 +41,16 @@ export function initMinix(Vue) {
       }
 
     }
-    ops.render; // 统一成render
+
+    mountComponent(vm); // 组件的挂载
+
+    // ops.render; // 统一成render,最终就可以获取render方法
+
+    // 通过script标签引入的vue这个编译是在浏览器运行的
+    // runtime是不包含模板编译的， 整个编译是在打包的时候通过loader编译.vue文件的，runtime是不能使用template模板的
+
   }
 }
 
-// 通过script标签引入的vue这个编译是在浏览器运行的
-// runtime是不包含模板编译的， 整个编译是在打包的时候通过loader编译.vue文件的，runtime是不能使用template模板的
 
 
