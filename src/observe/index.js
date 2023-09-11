@@ -1,6 +1,8 @@
 
 import { newArrayProto } from './array'
 
+import Dep from './dep'
+
 class Observer {
   constructor( data ) {
     // Obect.defineProperty只能劫持已经存在的属性，后增的，删除的，无法检测到（会有一些单独的api， $set, $delete）
@@ -31,14 +33,22 @@ class Observer {
 
 export function defineReactive(target, key, value) {
   observe( value ) // 对所有的对象都进行劫持
+  let dep = new Dep(); // 每个属性都有一个dep
   Object.defineProperty(target, key, {
-    get() { // 取值的时候执行
+    get() { // 取值的时候执行get
+
+      if( Dep.target ){
+        dep.depend(); // 让这个属性的收集器记住当前的watcher
+      }
+
+
       return value
     },
     set(newValue) { // 修改值的时候执行
       if( newValue === value ) return
       observe(newValue)
-      value = newValue
+      value = newValue;
+      dep.notify(); // 通知更新
     }
   })
 }
